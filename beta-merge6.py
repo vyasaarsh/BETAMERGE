@@ -77,8 +77,6 @@ def parse_hist1s_data(data, hist1s_data):
             })
     return table_data
 
-from collections import deque
-
 #Parse Historical(hist1m) data from SSH connection
 def parse_hist1m_data(data, hist1m_data):
     lines = data.strip().split('\n')
@@ -115,8 +113,6 @@ def parse_hist1m_data(data, hist1m_data):
                 'Trend': list(hist1m_data[symbol]),
             })
     return table_data
-
-from collections import deque
 
 #Parse Historical(hist1h) data from SSH connection
 def parse_hist1h_data(data, hist1h_data):
