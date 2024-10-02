@@ -52,7 +52,13 @@ def parse_hist1s_data(data, hist1s_data):
     table_data = []
     for line in lines:
         if line.startswith('!'):
-            _, timestamp = line.split(',')
+            parts = line.split(',')
+            if len(parts) >= 2:
+                _, timestamp = parts[:2]
+                # You can process the timestamp here if needed
+            else:
+                # Skip the line or handle it accordingly
+                continue
         else:
             try:
                 symbol, last_price, _ = line.split(',')
@@ -68,11 +74,13 @@ def parse_hist1s_data(data, hist1s_data):
                 hist1s_data[symbol] = trend
             else:
                 hist1s_data[symbol] = deque([float(last_price)])
+            price = float(last_price)
+            percent_change = (change / price) * 100 if price != 0 else 0
             table_data.append({
                 'Symbol': symbol,
-                'Price': float(last_price),
+                'Price': price,
                 'Change': change,
-                '% Change': (change / float(last_price)) * 100,
+                '% Change': percent_change,
                 'Trend': list(hist1s_data[symbol]),
             })
     return table_data
@@ -156,75 +164,79 @@ def parse_hist1h_data(data, hist1h_data):
 
 #Retrieve Real-Time(rt) data
 def get_real_time_data_rt(channel, historic_data):
-    data = channel.recv(1024).decode('ascii')
-    table_data = parse_real_time_data(data, historic_data)
+    if channel.recv_ready():
+        data = channel.recv(4096).decode('ascii')
+        table_data = parse_real_time_data(data, historic_data)
     
-    for symbol in historic_data.keys():
-        if symbol not in [item['Symbol'] for item in table_data]:
-            last_known_price = historic_data[symbol][-1]
-            table_data.append({
+        for symbol in historic_data.keys():
+            if symbol not in [item['Symbol'] for item in table_data]:
+                last_known_price = historic_data[symbol][-1]
+                table_data.append({
                 'Symbol': symbol,
                 'Price': last_known_price,
                 'Change': 0,
                 '% Change': 0,
                 'Trend': list(historic_data[symbol]),
-            })
+                })
 
-    return table_data
+        return table_data
 
 #Retrieve Historic(hist1s) data
 def get_real_time_data_hist1s(channel, hist1s_data):
-    data = channel.recv(1024).decode('ascii')
-    table_data = parse_hist1s_data(data, hist1s_data)
+    if channel.recv_ready():
+        data = channel.recv(4096).decode('ascii')
+        table_data = parse_hist1s_data(data, hist1s_data)
     
-    for symbol in hist1s_data.keys():
-        if symbol not in [item['Symbol'] for item in table_data]:
-            last_known_price = hist1s_data[symbol][-1]
-            table_data.append({
+        for symbol in hist1s_data.keys():
+            if symbol not in [item['Symbol'] for item in table_data]:
+                last_known_price = hist1s_data[symbol][-1]
+                table_data.append({
                 'Symbol': symbol,
                 'Price': last_known_price,
                 'Change': 0,
                 '% Change': 0,
                 'Trend': list(hist1s_data[symbol]),
-            })
+                })
 
-    return table_data
+        return table_data
 
 #Retrieve Historic(hist1m) data
 def get_real_time_data_hist1m(channel, hist1m_data):
-    data = channel.recv(1024).decode('ascii')
-    table_data = parse_hist1m_data(data, hist1m_data)
+    if channel.recv_ready():
+        data = channel.recv(4096).decode('ascii')
+        table_data = parse_hist1m_data(data, hist1m_data)
     
-    for symbol in hist1m_data.keys():
-        if symbol not in [item['Symbol'] for item in table_data]:
-            last_known_price = hist1m_data[symbol][-1]
-            table_data.append({
+        for symbol in hist1m_data.keys():
+            if symbol not in [item['Symbol'] for item in table_data]:
+                last_known_price = hist1m_data[symbol][-1]
+                table_data.append({
                 'Symbol': symbol,
                 'Price': last_known_price,
                 'Change': 0,
                 '% Change': 0,
                 'Trend': list(hist1m_data[symbol]),
-            })
+                })
 
-    return table_data
+        return table_data
 
 #Retrieve Historic(hist1h) data
 def get_real_time_data_hist1h(channel, hist1h_data):
-    data = channel.recv(1024).decode('ascii')
-    table_data = parse_hist1h_data(data, hist1h_data)
+    if channel.recv_ready():
+        data = channel.recv(1024).decode('ascii')
+        table_data = parse_hist1h_data(data, hist1h_data)
     
-    for symbol in hist1h_data.keys():
-        if symbol not in [item['Symbol'] for item in table_data]:
-            last_known_price = hist1h_data[symbol][-1]
-            table_data.append({
+        for symbol in hist1h_data.keys():
+            if symbol not in [item['Symbol'] for item in table_data]:
+                last_known_price = hist1h_data[symbol][-1]
+                table_data.append({
                 'Symbol': symbol,
                 'Price': last_known_price,
                 'Change': 0,
                 '% Change': 0,
                 'Trend': list(hist1h_data[symbol]),
-            })
+                })
 
-    return table_data
+        return table_data
 
 #Main function to monitor and fetch data
 
@@ -283,8 +295,11 @@ def main():
         new_data_hist1s = get_real_time_data_hist1s(channel_hist1s, hist_data_1s)
         if new_data_hist1s:
             table_data_hist1s = pd.DataFrame(new_data_hist1s)
+            table_data_hist1s['% Change'] = table_data_hist1s['% Change'].apply(lambda x:f"{x:.2f}%")
+            counter_hist1s += 1
+            sorted_table_hist1s = table_data_hist1s[['Symbol', 'Trend', 'Price', 'Change', '% Change']].drop_duplicates(subset=['Symbol']).sort_values(by='Symbol')
             container_hist1s.data_editor(
-                table_data_hist1s,
+                sorted_table_hist1s,
                 column_config={
                     "Symbol": st.column_config.TextColumn("Symbol"),
                     "Trend": st.column_config.LineChartColumn("Trend", width="medium"),
@@ -301,8 +316,11 @@ def main():
         new_data_hist1m = get_real_time_data_hist1m(channel_hist1m, hist_data_1m)
         if new_data_hist1m:
             table_data_hist1m = pd.DataFrame(new_data_hist1m)
+            table_data_hist1m['% Change'] = table_data_hist1m['% Change'].apply(lambda x:f"{x:.2f}%")
+            counter_hist1m += 1
+            sorted_table_hist1m = table_data_hist1m[['Symbol', 'Trend', 'Price', 'Change', '% Change']].drop_duplicates(subset=['Symbol']).sort_values(by='Symbol')
             container_hist1m.data_editor(
-                table_data_hist1m,
+                sorted_table_hist1m,
                 column_config={
                     "Symbol": st.column_config.TextColumn("Symbol"),
                     "Trend": st.column_config.LineChartColumn("Trend", width="medium"),
@@ -319,8 +337,11 @@ def main():
         new_data_hist1h = get_real_time_data_hist1h(channel_hist1h, hist_data_1h)
         if new_data_hist1h:
             table_data_hist1h = pd.DataFrame(new_data_hist1h)
+            table_data_hist1h['% Change'] = table_data_hist1h['% Change'].apply(lambda x:f"{x:.2f}%")
+            counter_hist1h += 1
+            sorted_table_hist1h = table_data_hist1h[['Symbol', 'Trend', 'Price', 'Change', '% Change']].drop_duplicates(subset=['Symbol']).sort_values(by='Symbol')
             container_hist1h.data_editor(
-                table_data_hist1h,
+                sorted_table_hist1h,
                 column_config={
                     "Symbol": st.column_config.TextColumn("Symbol"),
                     "Trend": st.column_config.LineChartColumn("Trend", width="medium"),
