@@ -50,85 +50,55 @@ def parse_real_time_data(data, historic_data):
     return table_data
 
 #Parse Historcal(hist1s) data from SSH connection
-def parse_hist1s_data(data, hist1s_data):
+def parse_hist1s_data(data):
     lines = data.strip().split('\n')
-    table_data = []
+    parsed_data = []
+    date = None
     for line in lines:
         if line.startswith('!'):
             parts = line.split(',')
             if len(parts) >= 2:
-                _, timestamp = parts[:2]
+                date, timestamp = parts[:2]
                 # You can process the timestamp here if needed
+                parsed_data.append({'Type': 'timestamp', 'Date': date, 'Time': timestamp})
             else:
-                # Skip the line or handle it accordingly
                 continue
         else:
             try:
                 symbol, last_price, _ = line.split(',')
+                parsed_data.append({'Symbol': symbol, 'Last Price': float(last_price)})
             except ValueError:
                 continue
-            change = 0
-            if symbol in hist1s_data:
-                trend = hist1s_data[symbol]
-                change = float(last_price) - trend[-1]
-                trend.append(float(last_price))
-                if len(trend) > 100:
-                    trend.popleft()  # Keep deque size manageable
-                hist1s_data[symbol] = trend
-            else:
-                hist1s_data[symbol] = deque([float(last_price)])
-            price = float(last_price)
-            percent_change = (change / price) * 100 if price != 0 else 0
-            table_data.append({
-                'Symbol': symbol,
-                'Price': price,
-                'Change': change,
-                '% Change': percent_change,
-                'Trend': list(hist1s_data[symbol]),
-            })
-    return table_data
+    return parsed_data
 
 #Parse Historical(hist1m) data from SSH connection
-def parse_hist1m_data(data, hist1m_data):
+def parse_hist1m_data(data):
     lines = data.strip().split('\n')
-    table_data = []
+    parsed_data = []
+    date = None
     for line in lines:
         if line.startswith('!'):
             parts = line.split(',')
             if len(parts) == 2:
-                _, timestamp = parts
+                date, timestamp = parts
                 # Assuming we can ignore the seconds, or treat them as '00'
                 timestamp = f"{timestamp}:00"
+                parsed_data.append({'Type': 'timestamp', 'Date': date, 'Time': timestamp})
             else:
                 continue
         else:
             try:
                 symbol, last_price, _ = line.split(',')
+                parsed_data.append({'Symbol': symbol, 'Last Price': float(last_price)})
             except ValueError:
                 continue
-            change = 0
-            if symbol in hist1m_data:
-                trend = hist1m_data[symbol]
-                change = float(last_price) - trend[-1]
-                trend.append(float(last_price))
-                if len(trend) > 100:
-                    trend.popleft()  # Keep deque size manageable
-                hist1m_data[symbol] = trend
-            else:
-                hist1m_data[symbol] = deque([float(last_price)])
-            table_data.append({
-                'Symbol': symbol,
-                'Price': float(last_price),
-                'Change': change,
-                '% Change': (change / float(last_price)) * 100,
-                'Trend': list(hist1m_data[symbol]),
-            })
-    return table_data
+    return parsed_data
+
 
 #Parse Historical(hist1h) data from SSH connection
-def parse_hist1h_data(data, hist1h_data):
+def parse_hist1h_data(data):
     lines = data.strip().split('\n')
-    table_data = []
+    parsed_data = []
     current_symbol = None
     
     for line in lines:
@@ -140,30 +110,15 @@ def parse_hist1h_data(data, hist1h_data):
                 date, timestamp, last_price, _ = line.split(',')
                 # Construct a timestamp (we ignore minutes/seconds)
                 timestamp = f"{date} {timestamp}:00:00"
+                parsed_data.append({
+                    'Symbol': current_symbol,
+                    'Last Price': float(last_price),
+                    'Timestamp': timestamp
+                })
             except ValueError:
                 continue
-            
-            change = 0
-            if current_symbol in hist1h_data:
-                trend = hist1h_data[current_symbol]
-                change = float(last_price) - trend[-1]
-                trend.append(float(last_price))
-                if len(trend) > 100:
-                    trend.popleft()  # Keep deque size manageable
-                hist1h_data[current_symbol] = trend
-            else:
-                hist1h_data[current_symbol] = deque([float(last_price)])
-            
-            table_data.append({
-                'Symbol': current_symbol,
-                'Price': float(last_price),
-                'Change': change,
-                '% Change': (change / float(last_price)) * 100,
-                'Trend': list(hist1h_data[current_symbol]),
-                'Timestamp': timestamp
-            })
     
-    return table_data
+    return parsed_data
 
 #Retrieve Real-Time(rt) data
 def get_real_time_data_rt(channel, historic_data):
