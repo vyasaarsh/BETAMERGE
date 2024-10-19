@@ -1,14 +1,15 @@
-#Libraries
+# Libraries
 import streamlit as st
 import pandas as pd 
 import paramiko
+import plotly.express as px
 from time import sleep
 from collections import defaultdict, deque
 
 from constants.timeRange import TimeRange
 from utils.getTimeRangeSpecificData import get_time_specific_data
 
-#Function to establish  SSH connection
+# Function to establish SSH connection
 def connect_ssh_agent(username): 
     hostname = "rt1.olsendata.com"
     port = 22103
@@ -18,7 +19,7 @@ def connect_ssh_agent(username):
     ssh.connect(hostname, port, username, password)
     return ssh.invoke_shell()
 
-#Parse Real-Time(rt) data from SSH connection
+# Parse Real-Time (rt) data from SSH connection
 def parse_real_time_data(data, historic_data):
     lines = data.strip().split('\n')
     table_data = []
@@ -49,7 +50,7 @@ def parse_real_time_data(data, historic_data):
             })
     return table_data
 
-#Parse Historcal(hist1s) data from SSH connection
+# Parse Historical (hist1s) data from SSH connection
 def parse_hist1s_data(data):
     lines = data.strip().split('\n')
     parsed_data = []
@@ -59,7 +60,6 @@ def parse_hist1s_data(data):
             parts = line.split(',')
             if len(parts) >= 2:
                 date, timestamp = parts[:2]
-                # You can process the timestamp here if needed
                 parsed_data.append({'Type': 'timestamp', 'Date': date, 'Time': timestamp})
             else:
                 continue
@@ -71,7 +71,7 @@ def parse_hist1s_data(data):
                 continue
     return parsed_data
 
-#Parse Historical(hist1m) data from SSH connection
+# Parse Historical (hist1m) data from SSH connection
 def parse_hist1m_data(data):
     lines = data.strip().split('\n')
     parsed_data = []
@@ -81,7 +81,6 @@ def parse_hist1m_data(data):
             parts = line.split(',')
             if len(parts) == 2:
                 date, timestamp = parts
-                # Assuming we can ignore the seconds, or treat them as '00'
                 timestamp = f"{timestamp}:00"
                 parsed_data.append({'Type': 'timestamp', 'Date': date, 'Time': timestamp})
             else:
@@ -94,8 +93,7 @@ def parse_hist1m_data(data):
                 continue
     return parsed_data
 
-
-#Parse Historical(hist1h) data from SSH connection
+# Parse Historical (hist1h) data from SSH connection
 def parse_hist1h_data(data):
     lines = data.strip().split('\n')
     parsed_data = []
@@ -103,16 +101,15 @@ def parse_hist1h_data(data):
     
     for line in lines:
         if line.startswith('#'):
-            # This line indicates the start of a new symbol section
-            current_symbol = line[1:].strip()  # Extract the symbol name after '#'
+            current_symbol = line[1:].strip()
         else:
             try:
                 date, timestamp, last_price, _ = line.split(',')
-                # Construct a timestamp (we ignore minutes/seconds)
                 timestamp = f"{date} {timestamp}:00:00"
                 parsed_data.append({
                     'Symbol': current_symbol,
                     'Last Price': float(last_price),
+                    'Date': date,
                     'Timestamp': timestamp
                 })
             except ValueError:
@@ -120,7 +117,7 @@ def parse_hist1h_data(data):
     
     return parsed_data
 
-#Retrieve Real-Time(rt) data
+# Retrieve Real-Time (rt) data
 def get_real_time_data_rt(channel, historic_data):
     if channel.recv_ready():
         data = channel.recv(4096).decode('ascii')
@@ -130,19 +127,19 @@ def get_real_time_data_rt(channel, historic_data):
             if symbol not in [item['Symbol'] for item in table_data]:
                 last_known_price = historic_data[symbol][-1]
                 table_data.append({
-                'Symbol': symbol,
-                'Price': last_known_price,
-                'Change': 0,
-                '% Change': 0,
-                'Trend': list(historic_data[symbol]),
+                    'Symbol': symbol,
+                    'Price': last_known_price,
+                    'Change': 0,
+                    '% Change': 0,
+                    'Trend': list(historic_data[symbol]),
                 })
 
         return table_data
 
-#Retrieve Historic data
+# Retrieve Historical data
 def get_historical_data(userName):
     print('connecting to ssh agent %s', userName)
-    channel = connect_ssh_agent("hist1s")
+    channel = connect_ssh_agent(userName)
     print('connected to channel of ssh agent %s', userName)
     print('fetching data for ssh channel of %s', userName)
     buffer = ''
@@ -159,7 +156,7 @@ def get_historical_data(userName):
     print('closed channel for ssh agent %s', userName)
     return buffer
 
-#Main function to monitor and fetch data
+# Main function to monitor and fetch data
 def main():
     st.set_page_config(layout="wide")
 
@@ -167,13 +164,9 @@ def main():
     
     channel_rt = connect_ssh_agent("rt")
     
-    # fetch historical data
+    # Fetch historical data
     historical_data_1h = get_historical_data("hist1h")
-    parse_hist1h_data = parse_hist1h_data(historical_data_1h)
-    # historical_data_1s = get_historical_data("hist1s")
-    # parse_hist1s_data = parse_hist1h_data(historical_data_1s)
-    # historical_data_1m = get_historical_data("hist1m")
-    # parse_hist1m_data = parse_hist1m_data(historical_data_1m)
+    parsed_hist1h_data = parse_hist1h_data(historical_data_1h)
 
     st.title("Real Time and Historical Prices")
     st.divider()
@@ -189,10 +182,33 @@ def main():
         [time_range.value for time_range in TimeRange.__members__.values()],
     )
 
-    # You can use the selected option to determine the time range
+    # Use the selected option to determine the time range
     selected_time_range = next((time_range for time_range in TimeRange if time_range.value == option), None)
 
-    time_range_data = get_time_specific_data(selected_time_range.value, [], [], parse_hist1h_data)
+    time_range_data = get_time_specific_data(selected_time_range.value, [], [], parsed_hist1h_data)
+
+    # Create a line chart for historical data
+    st.subheader(f"Historical Data for {selected_time_range.value}")
+    
+    if time_range_data:
+        df_time_range = pd.DataFrame(time_range_data)
+        
+        # Ensure that the dataframe contains 'Timestamp' and 'Last Price' for plotting
+        if 'Timestamp' in df_time_range.columns and 'Last Price' in df_time_range.columns:
+            fig = px.line(
+                df_time_range,
+                x='Timestamp',
+                y='Last Price',
+                title=f"{selected_time_range.value} Price Trends",
+                labels={'Timestamp': 'Date/Time', 'Last Price': 'Price'},
+                line_shape='linear',
+            )
+            fig.update_layout(xaxis_title='Date/Time', yaxis_title='Price', template='plotly_white')
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No data available for the selected time range.")
+
+
 
     while True:
         # Fetch and display real-time data
