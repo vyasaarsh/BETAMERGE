@@ -91,7 +91,7 @@ def parse_hist1h_data(data):
                     'Symbol': current_symbol,
                     'Last Price': float(last_price),
                     'Date': date,
-                    'Timestamp': timestamp
+                    'Time': timestamp
                 })
             except ValueError:
                 continue

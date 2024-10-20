@@ -4,6 +4,7 @@ import pandas as pd
 from time import sleep
 from collections import defaultdict, deque
 import threading
+import plotly.express as px
 
 from constants.timeRange import TimeRange
 from utils.getTimeRangeSpecificData import get_time_specific_data
@@ -76,7 +77,7 @@ def fetch_all_historical_resources():
         parsed_hist1h_data[0] = fetch_resource_1h()
 
     def cached_fetch_resource_1m():
-        parsed_hist1h_data[0] = fetch_resource_1m()
+        parsed_hist1m_data[0] = fetch_resource_1m()
 
     def cached_fetch_resource_1s():
         parsed_hist1s_data[0] = fetch_resource_1h()
@@ -107,6 +108,7 @@ def main():
     st.set_page_config(layout="wide")
     # Start the threads to fetch all resources in parallel
     parsed_hist1s_data, parsed_hist1m_data, parsed_hist1h_data= fetch_all_historical_resource_once()
+    print(parsed_hist1m_data)
 
     historic_data = defaultdict(deque)
     
@@ -129,34 +131,38 @@ def main():
     # Use the selected option to determine the time range
     selected_time_range = next((time_range for time_range in TimeRange if time_range.value == option), None)
 
-    time_range_data = get_time_specific_data(selected_time_range.value, parsed_hist1s_data, parsed_hist1m_data, parsed_hist1h_data)
+    time_range_data = []
+    if parsed_hist1s_data is not None and parsed_hist1m_data is not None and parsed_hist1h_data is not None:
+        time_range_data = get_time_specific_data(selected_time_range.value, parsed_hist1s_data, parsed_hist1m_data, parsed_hist1h_data)
+    
+    print(time_range_data)
 
     # Create a line chart for historical data
     st.subheader(f"Historical Data for {selected_time_range.value}")
     
-    # if time_range_data:
-    #     df_time_range = pd.DataFrame(time_range_data)
+    if time_range_data:
+        df_time_range = pd.DataFrame(time_range_data)
         
-    #     # Ensure that the dataframe contains 'Timestamp' and 'Last Price' for plotting
-    #     if 'Timestamp' in df_time_range.columns and 'Last Price' in df_time_range.columns:
-    #         fig = px.line(
-    #             df_time_range,
-    #             x='Timestamp',
-    #             y='Last Price',
-    #             title=f"{selected_time_range.value} Price Trends",
-    #             labels={'Timestamp': 'Date/Time', 'Last Price': 'Price'},
-    #             line_shape='linear',
-    #         )
-    #         fig.update_layout(xaxis_title='Date/Time', yaxis_title='Price', template='plotly_white')
-    #         st.plotly_chart(fig, use_container_width=True)
-    #     else:
-    #         st.warning("No data available for the selected time range.")
+        # Ensure that the dataframe contains 'Timestamp' and 'Last Price' for plotting
+        if 'Time' in df_time_range.columns and 'Last Price' in df_time_range.columns:
+            fig = px.line(
+                df_time_range,
+                x='Time',
+                y='Last Price',
+                title=f"{selected_time_range.value} Price Trends",
+                labels={'Time': 'Date/Time', 'Last Price': 'Price'},
+                line_shape='linear',
+            )
+            fig.update_layout(xaxis_title='Date/Time', yaxis_title='Price', template='plotly_white')
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No data available for the selected time range.")
 
     # while True:
     #     # Fetch and display real-time data
     #     new_data_rt = get_real_time_data_rt(channel_rt, historic_data)
     #     if new_data_rt:
-    #         table_data_rt = pd.DataFrame(new_data_rt)
+    #         table_data   _rt = pd.DataFrame(new_data_rt)
     #         table_data_rt['% Change'] = table_data_rt['% Change'].apply(lambda x: f"{x:.2f}%")
     #         counter_rt += 1
     #         sorted_table_rt = table_data_rt[['Symbol', 'Trend', 'Price', 'Change', '% Change']].drop_duplicates(subset=['Symbol']).sort_values(by='Symbol')
