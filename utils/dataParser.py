@@ -35,43 +35,56 @@ def parse_real_time_data(data, historic_data):
 def parse_hist1s_data(data):
     lines = data.strip().split('\n')
     parsed_data = []
-    date = None
+    current_date = None
+    current_timestamp = None
+    
     for line in lines:
         if line.startswith('!'):
-            parts = line.split(',')
-            if len(parts) >= 2:
-                date, timestamp = parts[:2]
-                parsed_data.append({'Type': 'timestamp', 'Date': date, 'Time': timestamp})
-            else:
-                continue
+            # Parse timestamp line
+            date, time = line[1:].split(',')  # Remove '!' and split
+            current_date = date
+            current_timestamp = f"{date} {time}"  # Time already includes seconds
         else:
             try:
+                # Parse data line (symbol, price, ignored)
                 symbol, last_price, _ = line.split(',')
-                parsed_data.append({'Symbol': symbol, 'Last Price': float(last_price)})
+                parsed_data.append({
+                    'Symbol': symbol,
+                    'Last Price': float(last_price),
+                    'Date': current_date,
+                    'Time': current_timestamp
+                })
             except ValueError:
                 continue
+    
     return parsed_data
 
 # Parse Historical (hist1m) data from SSH connection
 def parse_hist1m_data(data):
     lines = data.strip().split('\n')
     parsed_data = []
-    date = None
+    current_date = None
+    current_timestamp = None
+    
     for line in lines:
         if line.startswith('!'):
-            parts = line.split(',')
-            if len(parts) == 2:
-                date, timestamp = parts
-                timestamp = f"{timestamp}:00"
-                parsed_data.append({'Type': 'timestamp', 'Date': date, 'Time': timestamp})
-            else:
-                continue
+            # Parse timestamp line
+            date, time = line[1:].split(',')  # Remove '!' and split
+            current_date = date
+            current_timestamp = f"{date} {time}:00"
         else:
             try:
+                # Parse data line (symbol, price, ignored)
                 symbol, last_price, _ = line.split(',')
-                parsed_data.append({'Symbol': symbol, 'Last Price': float(last_price)})
+                parsed_data.append({
+                    'Symbol': symbol,
+                    'Last Price': float(last_price),
+                    'Date': current_date,
+                    'Time': current_timestamp
+                })
             except ValueError:
                 continue
+    
     return parsed_data
 
 # Parse Historical (hist1h) data from SSH connection
