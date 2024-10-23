@@ -80,7 +80,7 @@ def fetch_all_historical_resources():
         parsed_hist1m_data[0] = fetch_resource_1m()
 
     def cached_fetch_resource_1s():
-        parsed_hist1s_data[0] = fetch_resource_1h()
+        parsed_hist1s_data[0] = fetch_resource_1s()
 
     
     thread1 = threading.Thread(target=cached_fetch_resource_1h)
@@ -108,7 +108,6 @@ def main():
     st.set_page_config(layout="wide")
     # Start the threads to fetch all resources in parallel
     parsed_hist1s_data, parsed_hist1m_data, parsed_hist1h_data= fetch_all_historical_resource_once()
-    print(parsed_hist1m_data)
 
     historic_data = defaultdict(deque)
     
@@ -134,8 +133,6 @@ def main():
     time_range_data = []
     if parsed_hist1s_data is not None and parsed_hist1m_data is not None and parsed_hist1h_data is not None:
         time_range_data = get_time_specific_data(selected_time_range.value, parsed_hist1s_data, parsed_hist1m_data, parsed_hist1h_data)
-    
-    print(time_range_data)
 
     # Create a line chart for historical data
     st.subheader(f"Historical Data for {selected_time_range.value}")
