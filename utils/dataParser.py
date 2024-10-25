@@ -48,6 +48,8 @@ def parse_hist1s_data(data):
             try:
                 # Parse data line (symbol, price, ignored)
                 symbol, last_price, _ = line.split(',')
+                if not current_date:
+                    continue
                 parsed_data.append({
                     'Symbol': symbol,
                     'Last Price': float(last_price),
@@ -76,6 +78,8 @@ def parse_hist1m_data(data):
             try:
                 # Parse data line (symbol, price, ignored)
                 symbol, last_price, _ = line.split(',')
+                if not current_date:
+                    continue
                 parsed_data.append({
                     'Symbol': symbol,
                     'Last Price': float(last_price),
