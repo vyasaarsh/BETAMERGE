@@ -109,6 +109,10 @@ def main():
     # Start the threads to fetch all resources in parallel
     parsed_hist1s_data, parsed_hist1m_data, parsed_hist1h_data= fetch_all_historical_resource_once()
 
+    #st.write("1s Data:", parsed_hist1s_data)
+    #st.write("1m Data:", parsed_hist1m_data)
+    #st.write("1h Data:", parsed_hist1h_data)
+
     historic_data = defaultdict(deque)
     
     # channel_rt = connect_ssh_agent("rt")
@@ -141,13 +145,14 @@ def main():
         df_time_range = pd.DataFrame(time_range_data)
         
         # Ensure that the dataframe contains 'Timestamp' and 'Last Price' for plotting
-        if 'Time' in df_time_range.columns and 'Last Price' in df_time_range.columns:
+        if 'Time' in df_time_range.columns and 'Last Price' in df_time_range.columns and 'Symbol' in df_time_range.columns:
             fig = px.line(
                 df_time_range,
                 x='Time',
                 y='Last Price',
+                color='Symbol',
                 title=f"{selected_time_range.value} Price Trends",
-                labels={'Time': 'Date/Time', 'Last Price': 'Price'},
+                labels={'Time': 'Date/Time', 'Last Price': 'Price', 'Symbol': 'Symbol'},
                 line_shape='linear',
             )
             fig.update_layout(xaxis_title='Date/Time', yaxis_title='Price', template='plotly_white')
