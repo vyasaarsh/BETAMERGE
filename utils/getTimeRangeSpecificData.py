@@ -52,38 +52,38 @@ def get_time_specific_data(time_range, parsed1s_data, parsed1m_data, parsed1h_da
         case TimeRange.LAST_MONTH_MINUTE.value:
             start_date = datetime(current_date.year, current_date.month - 1, 1)  # Start of last month
             end_date = current_date.replace(day=1) - timedelta(days=1)  # Last day of last month
-            filtered_data = [data for data in parsed1m_data if start_date <= datetime.strptime(data['Time'], '%d.%m.%Y %H:%M:%S') <= end_date]
+            filtered_data = [data for data in parsed1m_data if start_date <= datetime.strptime(data['Time'].strip(), '%Y%m%d %H:%M:%S') <= end_date]
             return filtered_data
 
         case TimeRange.LAST_WEEK_MINUTE.value:
             start_date = current_date - timedelta(days=7)  # 7 days ago
             end_date = current_date
-            filtered_data = [data for data in parsed1m_data if start_date <= datetime.strptime(data['Time'], '%d.%m.%Y %H:%M:%S') <= end_date]
+            filtered_data = [data for data in parsed1m_data if start_date <= datetime.strptime(data['Time'], '%Y%m%d %H:%M:%S') <= end_date]
             return filtered_data
 
         # Second aggregations
         case TimeRange.YESTERDAY_SECOND.value:
             start_date = (current_date - timedelta(days=1)).replace(hour=0, minute=0, second=0)  # Yesterday 12 AM
             end_date = start_date.replace(hour=23, minute=59, second=59)  # Yesterday 11:59 PM
-            filtered_data = [data for data in parsed1s_data if start_date <= datetime.strptime(data['Time'], '%d.%m.%Y %H:%M:%S') <= end_date]
+            filtered_data = [data for data in parsed1s_data if start_date <= datetime.strptime(data['Time'], '%Y%m%d %H:%M:%S') <= end_date]
             return filtered_data
 
         case TimeRange.TODAY_SECOND.value:
             start_date = current_date.replace(hour=0, minute=0, second=0)  # Today 12 AM
             end_date = current_date  # Current time today
-            filtered_data = [data for data in parsed1s_data if start_date <= datetime.strptime(data['Time'], '%d.%m.%Y %H:%M:%S') <= end_date]
+            filtered_data = [data for data in parsed1s_data if start_date <= datetime.strptime(data['Time'], '%Y%m%d %H:%M:%S') <= end_date]
             return filtered_data
 
         case TimeRange.LAST_12HR_SECOND.value:
             start_date = current_date - timedelta(hours=12)  # 12 hours ago
             end_date = current_date  # Current time
-            filtered_data = [data for data in parsed1s_data if start_date <= datetime.strptime(data['Time'], '%d.%m.%Y %H:%M:%S') <= end_date]
+            filtered_data = [data for data in parsed1s_data if start_date <= datetime.strptime(data['Time'], '%Y%m%d %H:%M:%S') <= end_date]
             return filtered_data
 
         case TimeRange.LAST_24HR_SECOND.value:
             start_date = current_date - timedelta(hours=24)  # 24 hours ago
             end_date = current_date  # Current time
-            filtered_data = [data for data in parsed1s_data if start_date <= datetime.strptime(data['Time'], '%d.%m.%Y %H:%M:%S') <= end_date]
+            filtered_data = [data for data in parsed1s_data if start_date <= datetime.strptime(data['Time'], '%Y%m%d %H:%M:%S') <= end_date]
             return filtered_data
 
         case _:
