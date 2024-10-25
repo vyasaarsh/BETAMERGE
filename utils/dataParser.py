@@ -1,4 +1,5 @@
 from collections import deque
+from datetime import datetime
 
 # Parse Real-Time (rt) data from SSH connection
 def parse_real_time_data(data, historic_data):
@@ -42,8 +43,11 @@ def parse_hist1s_data(data):
         if line.startswith('!'):
             # Parse timestamp line
             date, time = line[1:].split(',')  # Remove '!' and split
-            current_date = date
-            current_timestamp = f"{date} {time}"  # Time already includes seconds
+            current_date = date.strip()
+            time = time.strip().replace('\r', '').replace('\n', '')
+            if len(time.split(':')) == 2:
+                time += ':00'
+            current_timestamp = f"{current_date} {time}"  # Time already includes seconds
         else:
             try:
                 # Parse data line (symbol, price, ignored)
@@ -72,8 +76,11 @@ def parse_hist1m_data(data):
         if line.startswith('!'):
             # Parse timestamp line
             date, time = line[1:].split(',')  # Remove '!' and split
-            current_date = date
-            current_timestamp = f"{date} {time}:00"
+            current_date = date.strip()
+            time = time.strip().replace('\r', '').replace('\n', '')
+            if len(time.split(':')) == 2:
+                time += ':00'
+            current_timestamp = f"{current_date} {time}"
         else:
             try:
                 # Parse data line (symbol, price, ignored)
@@ -90,6 +97,7 @@ def parse_hist1m_data(data):
                 continue
     
     return parsed_data
+
 
 # Parse Historical (hist1h) data from SSH connection
 def parse_hist1h_data(data):
